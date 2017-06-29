@@ -1,0 +1,295 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+		<meta charset="utf-8">
+
+		<title>The HTML5 Herald</title>
+		<meta name="description" content="The HTML5 Herald">
+
+
+		<!--[if lt IE 9]>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body style="background-color: black; width: 100%; overflow: hidden;color: #fff">
+		<div>
+    	</div>
+		<canvas id="canvas" width="1920" height="1080" style="width: 100%;"></canvas>
+		<script src="colormix-2.0.0.js"></script>
+		<script>
+			var canvas = document.getElementById("canvas");
+			var context = canvas.getContext("2d");
+			var grid_size = 20;
+			var half_hexagon = (Math.cos((1/6) * Math.PI) * grid_size);
+			
+			var max_y = 35;
+			var max_x = 60;
+			var nodes = [];
+			var sign = 1;
+
+			var last = performance.now() / 1000;
+			var fpsThreshold = 0;
+
+			var audio = [];
+
+			var max_fps = 25;
+
+			var average_volume = 0;
+			for (var x = 0; x < 60; x++) {
+				sign = -sign;
+				for (var y = 0; y < 35; y++) {
+					
+
+					nodes.push({
+						x: x,
+						y: y,
+						color: '#000000',
+						angle: 0,
+						sign: sign,
+						r: 0,
+						g: 0,
+						b: 0,
+						colorevent: -1
+					});
+				}
+			}
+
+			function draw_nodes() {
+				for (var i = 0; i < nodes.length; i++) {
+					draw_node(nodes[i]);
+				}
+			}
+
+
+			var update_nodes1 = [];
+			var update_nodes2 = [];
+			var using_1 = true;
+			var color_event = 0;
+
+			window.onload = function() {
+			    window.wallpaperRegisterAudioListener(wallpaperAudioListener);
+			    window.requestAnimationFrame(run);
+			};
+
+			function wallpaperAudioListener(audioArray) {
+
+				audio = audioArray;
+
+				var fpsElement = document.getElementById('AudioDisplay');
+    			fpsElement.textContent = audioArray[0];
+    			var element = document.getElementById('Average');
+    			element.textContent = average_volume;
+
+			}
+				
+			function processAudioArray() {
+				if (audio.length == 128) {
+					var sum = 1.0;
+					for (var i = 0; i < 128; i++) {
+						sum += audio[i];
+					}
+					average_volume = average_volume * 0.99 + sum * 0.01
+					if (sum > average_volume * 1.5 * (Math.random() + 0.5)) {
+						color_event += 1;
+						var x = Math.ceil(Math.random() * max_x - 1);
+						var y = Math.ceil(Math.random() * max_y - 1);
+						var node = get_node(x, y);
+						node.r = Math.round(Math.random() * 255);
+						node.g = Math.round(Math.random() * 255);
+						node.b = Math.round(Math.random() * 255);
+
+						node.colorevent = color_event;
+						update_color(node);
+						if (using_1) {
+							update_nodes2.push(node);
+						} else {
+							update_nodes1.push(node);
+						}
+					}
+				}
+			}
+
+			function run() {
+				window.requestAnimationFrame(run);
+				var now = performance.now() / 1000;
+			    var dt = Math.min(now - last, 1);
+			    last = now;
+
+			    // If there is an FPS limit, abort updating the animation if we reached the desired FPS
+			    if (max_fps > 0) {
+			        fpsThreshold += dt;
+			        if (fpsThreshold < 1.0 / max_fps) {
+			            return;
+			        }
+			        fpsThreshold -= 1.0 / max_fps;
+			    }
+			    /*
+				var testAudioArray = []
+				for (var i = 0; i < 128; i++) {
+					testAudioArray.push(Math.random());
+				}
+				wallpaperAudioListener(testAudioArray);*/
+				processAudioArray();
+				queue_update();
+				for (var i = 0; i < nodes.length; i++) {
+					var node = nodes[i];
+					node.r = Math.max(node.r - 7, 0);
+					node.g = Math.max(node.g - 7, 0);
+					node.b = Math.max(node.b - 7, 0);
+					update_color(node);
+				}
+			}
+
+			function queue_update() {
+				if (using_1) {
+					for (var i = 0; i < update_nodes1.length; i++) {
+						select_surrounding_nodes(update_nodes1[i]);
+					}
+					update_nodes1 = [];
+				} else {
+					for (var i = 0; i < update_nodes2.length; i++) {
+						select_surrounding_nodes(update_nodes2[i]);
+					}
+					update_nodes2 = [];
+				}
+
+				context.clearRect(0, 0, canvas.width, canvas.height);
+				draw_nodes();
+				/*context.font = "30px Arial";
+				context.fillStyle = "#ffffff";
+				context.fillText(average_volume, 10, 30);*/
+				using_1 = !using_1;
+			}
+
+			function select_surrounding_nodes(node) {
+				if (node.x > 0) {
+					if (node.y < max_y - 1) {
+						queue_update_colors(get_node(node.x - 1, node.y + 1), node);
+					}
+					queue_update_colors(get_node(node.x - 1, node.y), node);
+				}
+				if (node.y > 0) {
+					queue_update_colors(get_node(node.x, node.y - 1), node);
+				}
+				if (node.y < max_y - 1) {
+					queue_update_colors(get_node(node.x, node.y + 1), node);
+				}
+				if (node.x < max_x - 1) {
+					if (node.y < max_y - 1) {
+						queue_update_colors(get_node(node.x + 1, node.y + 1), node);
+					}
+					queue_update_colors(get_node(node.x + 1, node.y), node);
+				}
+			}
+
+			function queue_update_colors(node, parent) {
+				if (node.colorevent < parent.colorevent) {
+					node.colorevent = parent.colorevent;
+
+					var nodeColor = new ColorMix.Color(node.r, node.g, node.b);
+					var parentColor = new ColorMix.Color(parent.r, parent.g, parent.b);
+
+					var result = ColorMix.mix([nodeColor, parentColor], [10, 90]);
+
+					node.r = result.red;
+					node.g = result.green;
+					node.b = result.blue;
+
+					if (Math.max(node.r, node.g, node.b) > 0) {
+						if (!using_1) {
+							update_nodes1.push(node);
+						} else {
+							update_nodes2.push(node);
+						}
+					}
+				}
+			}
+
+			
+
+			function update_color(node) {
+				var red_part = Math.round(node.r).toString(16);
+				var green_part = Math.round(node.g).toString(16);
+				var blue_part = Math.round(node.b).toString(16);
+
+				if (node.r < 16) {
+					red_part = "0" + red_part;
+				}
+				if (node.g < 16) {
+					green_part = "0" + green_part;
+				}
+				if (node.b < 16) {
+					blue_part = "0" + blue_part;
+				}
+				node.color = "#" + red_part + green_part + blue_part;
+			}
+			
+			function get_node(x, y) {
+				return nodes[x * max_y + y];
+			}
+			
+
+
+			function draw_node(node) {
+				if (Math.max(node.r, node.g, node.b) > 0) {
+					context.lineWidth = 1;
+					context.beginPath();
+
+					var tempx = node.x * grid_size * 1.5;
+
+					var tempy = node.y * 2 * half_hexagon - (node.sign * half_hexagon * 0.5);
+					context.moveTo(tempx, tempy);
+					context.lineTo(tempx + Math.cos(node.angle) * grid_size, tempy + Math.sin(node.angle) * grid_size);
+					context.moveTo(tempx, tempy);
+
+					context.lineTo(tempx + Math.cos(node.angle + ((2/3) * Math.PI)) * grid_size, tempy + Math.sin(node.angle + ((2/3) * Math.PI)) * grid_size);
+					context.moveTo(tempx, tempy);
+					context.lineTo(tempx + Math.cos(node.angle + ((4/3) * Math.PI)) * grid_size, tempy + Math.sin(node.angle + ((4/3) * Math.PI)) * grid_size);
+					context.strokeStyle = node.color;
+					context.stroke();
+				}
+			}
+
+
+
+			//draw_hexagons();
+			while (false) {
+				draw_hexagons();
+			}
+			function draw_hexagons() {
+				var size = 10;
+				var offset = (size / 1);
+				for (var x = -100; x < 150; x++) {
+					offset = -offset;
+					for (var y = -100; y < 150; y++) {
+						draw_hexagon(((size / 2) * 7) * x, (size * 4)*y + offset, 20, canvas);
+					}
+				}
+			}
+
+
+
+			function draw_hexagon(x, y, size, canvas) {
+				var tempx = x;
+				var tempy = y;
+				var angle = 0;
+				drawer = canvas.getContext('2d');
+				drawer.lineWidth = 2;
+				drawer.beginPath();
+				drawer.moveTo(x, y);
+
+				for (var i = 0; i < 12; i++) {
+
+					tempx = Math.cos(angle) * size + tempx;
+					tempy = Math.sin(angle) * size + tempy;
+					drawer.lineTo(tempx, tempy);
+					angle += (1/3) * Math.PI;
+				}
+
+				drawer.strokeStyle = "#ff0000";
+				drawer.stroke();
+			}
+		</script>
+	</body>
+</html>
