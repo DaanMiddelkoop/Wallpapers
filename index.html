@@ -13,9 +13,7 @@
 	</head>
 
 	<body style="background-color: black; width: 100%; overflow: hidden;color: #fff">
-		<div>
-    	</div>
-		<canvas id="canvas" width="1920" height="1080" style="width: 100%;"></canvas>
+		<canvas id="canvas" width="1920" height="1080" style="width: 120%;"></canvas>
 		<script src="colormix-2.0.0.js"></script>
 		<script>
 			var canvas = document.getElementById("canvas");
@@ -33,9 +31,14 @@
 
 			var audio = [];
 
-			var max_fps = 25;
+			var max_fps = 35;
 
 			var average_volume = 0;
+
+			var previous_sums = [];
+			for (var i = 0; i < 4; i++) {
+				previous_sums.push(0);
+			}
 			for (var x = 0; x < 60; x++) {
 				sign = -sign;
 				for (var y = 0; y < 35; y++) {
@@ -54,6 +57,22 @@
 					});
 				}
 			}
+			var background_color = "#050505";
+
+			window.wallpaperPropertyListener = {
+			    applyUserProperties: function(properties) {
+			        // Read scheme color
+			        if (properties.schemecolor) {
+			            // Convert the scheme color to be applied as a CSS style
+			            var schemeColor = properties.schemecolor.value.split(' ');
+			            schemeColor = schemeColor.map(function(c) {
+			                return Math.ceil(c * 255);
+			            });
+			            background_color = 'rgb(' + schemeColor + ')';
+			            draw_hexagons();
+			        }
+			    }
+			};
 
 			function draw_nodes() {
 				for (var i = 0; i < nodes.length; i++) {
@@ -85,12 +104,44 @@
 				
 			function processAudioArray() {
 				if (audio.length == 128) {
-					var sum = 1.0;
+					var sum = 0.0;
 					for (var i = 0; i < 128; i++) {
 						sum += audio[i];
 					}
-					average_volume = average_volume * 0.99 + sum * 0.01
-					if (sum > average_volume * 1.5 * (Math.random() + 0.5)) {
+
+					var found_peak = false;
+					var average = sum / 128;
+
+					for (var i = 0; i < 118; i++) {
+						var peak = 0;
+						for (var j = 0; j < 10; j++) {
+							peak += audio[i];
+						}
+
+						if (peak / 10 > average * 6) {
+							found_peak = true;
+						}
+					}
+
+					if (sum > average_volume * 1.2) {
+						found_peak = true;
+					}
+
+
+					average_volume = average_volume * 0.80 + sum * 0.20;
+
+					
+					var spawning = true;
+					for (var i = 0; i < previous_sums.length; i++) {
+						if (previous_sums[i] > sum) {
+							spawning = false;
+							break;
+						}
+					}
+
+					hexagon_canvas_context.clearRect(20, 20, 40, 40);
+					//if (sum > average_volume * 1.5 * (Math.random() + 0.5)) {
+					if ((found_peak || spawning) && sum > Math.random() + 0.5) {
 						color_event += 1;
 						var x = Math.ceil(Math.random() * max_x - 1);
 						var y = Math.ceil(Math.random() * max_y - 1);
@@ -106,7 +157,16 @@
 						} else {
 							update_nodes1.push(node);
 						}
+
+						hexagon_canvas_context.fillRect(20, 20, 40, 40);
+						hexagon_canvas_context.fillStyle = node.color;
 					}
+
+
+					for (var i = previous_sums.length - 2; i >= 0; i--) {
+						previous_sums[i + 1] = previous_sums[i];
+					}
+					previous_sums[0] = sum;
 				}
 			}
 
@@ -132,11 +192,17 @@
 				wallpaperAudioListener(testAudioArray);*/
 				processAudioArray();
 				queue_update();
+
+				context.clearRect(0, 0, canvas.width, canvas.height);
+				draw_hexagon_canvas();
+				draw_nodes();
+
+
 				for (var i = 0; i < nodes.length; i++) {
 					var node = nodes[i];
-					node.r = Math.max(node.r - 7, 0);
-					node.g = Math.max(node.g - 7, 0);
-					node.b = Math.max(node.b - 7, 0);
+					node.r = Math.max(node.r - 5, 0);
+					node.g = Math.max(node.g - 5, 0);
+					node.b = Math.max(node.b - 5, 0);
 					update_color(node);
 				}
 			}
@@ -154,8 +220,7 @@
 					update_nodes2 = [];
 				}
 
-				context.clearRect(0, 0, canvas.width, canvas.height);
-				draw_nodes();
+				
 				/*context.font = "30px Arial";
 				context.fillStyle = "#ffffff";
 				context.fillText(average_volume, 10, 30);*/
@@ -252,18 +317,30 @@
 			}
 
 
+			var hexagon_canvas = document.createElement("canvas");
+			var hexagon_canvas_context = hexagon_canvas.getContext("2d");
+			hexagon_canvas.height = canvas.height;
+			hexagon_canvas.width = canvas.width;
+			draw_hexagons();
+
+			function draw_hexagon_canvas() {
+				context.drawImage(hexagon_canvas, 0, 0);
+			}
 
 			//draw_hexagons();
 			while (false) {
 				draw_hexagons();
 			}
 			function draw_hexagons() {
-				var size = 10;
-				var offset = (size / 1);
-				for (var x = -100; x < 150; x++) {
+				hexagon_canvas_context.clearRect(0, 0, canvas.width, canvas.height);
+				var size = 9;
+				var offset = 1;
+				for (var x = 0; x < 60; x++) {
 					offset = -offset;
-					for (var y = -100; y < 150; y++) {
-						draw_hexagon(((size / 2) * 7) * x, (size * 4)*y + offset, 20, canvas);
+					for (var y = -1; y < 35; y++) {
+						var x2 = x * grid_size * 1.5 + 2;
+						var y2 = y * 2 * half_hexagon - (offset * half_hexagon * 0.5) + 3;
+						draw_hexagon(x2, y2, 20, canvas);
 					}
 				}
 			}
@@ -274,21 +351,20 @@
 				var tempx = x;
 				var tempy = y;
 				var angle = 0;
-				drawer = canvas.getContext('2d');
-				drawer.lineWidth = 2;
-				drawer.beginPath();
-				drawer.moveTo(x, y);
+				hexagon_canvas_context.lineWidth = 2;
+				hexagon_canvas_context.beginPath();
+				hexagon_canvas_context.moveTo(x, y);
 
 				for (var i = 0; i < 12; i++) {
 
-					tempx = Math.cos(angle) * size + tempx;
-					tempy = Math.sin(angle) * size + tempy;
-					drawer.lineTo(tempx, tempy);
+					tempx = Math.cos(angle) * grid_size * 0.8 + tempx;
+					tempy = Math.sin(angle) * grid_size * 0.8 + tempy;
+					hexagon_canvas_context.lineTo(tempx, tempy);
 					angle += (1/3) * Math.PI;
 				}
 
-				drawer.strokeStyle = "#ff0000";
-				drawer.stroke();
+				hexagon_canvas_context.strokeStyle = background_color;
+				hexagon_canvas_context.stroke();
 			}
 		</script>
 	</body>

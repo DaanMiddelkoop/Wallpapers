@@ -1,10 +1,25 @@
 {
-    "file" : "index.html",
-    "preview" : "prev.png",
-    "general" : 
-    {
-        "supportsaudioprocessing" : true
-    },
-    "title" : "A nice audio responsive hexagon based wallpaper",
-    "type" : "web"
+	"description" : "Simple wallpaper that responds to audio",
+	"file" : "index.html",
+	"general" : 
+	{
+		"properties" : 
+		{
+			"schemecolor" : 
+			{
+				"order" : 0,
+				"text" : "ui_browse_properties_scheme_color",
+				"type" : "color",
+				"value" : "0.1 0.1 0.1"
+			}
+		},
+		"supportsaudioprocessing" : true
+	},
+	"monetization" : false,
+	"preview" : "preview.jpg",
+	"tags" : [ "Abstract" ],
+	"title" : "A nice audio responsive hexagon based wallpaper",
+	"type" : "web",
+	"visibility" : "public",
+	"workshopid" : 959287740
 }
