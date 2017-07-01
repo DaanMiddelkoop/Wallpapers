@@ -33,7 +33,11 @@
 
 			var max_fps = 35;
 
-			var average_volume = 0;
+			var average_sum = 0;
+			var average_volume = [];
+			for (var i = 0; i < 128; i++) {
+				average_volume.push(0);
+			}
 
 			var previous_sums = [];
 			for (var i = 0; i < 4; i++) {
@@ -98,7 +102,6 @@
 				var fpsElement = document.getElementById('AudioDisplay');
     			fpsElement.textContent = audioArray[0];
     			var element = document.getElementById('Average');
-    			element.textContent = average_volume;
 
 			}
 				
@@ -109,7 +112,8 @@
 						sum += audio[i];
 					}
 
-					var found_peak = false;
+
+					/*var found_peak = false;
 					var average = sum / 128;
 
 					for (var i = 0; i < 118; i++) {
@@ -142,26 +146,31 @@
 					hexagon_canvas_context.clearRect(20, 20, 40, 40);
 					//if (sum > average_volume * 1.5 * (Math.random() + 0.5)) {
 					if ((found_peak || spawning) && sum > Math.random() + 0.5) {
-						color_event += 1;
-						var x = Math.ceil(Math.random() * max_x - 1);
-						var y = Math.ceil(Math.random() * max_y - 1);
-						var node = get_node(x, y);
-						node.r = Math.round(Math.random() * 255);
-						node.g = Math.round(Math.random() * 255);
-						node.b = Math.round(Math.random() * 255);
+						*/
+					for (var i = 0; i < 128; i++) {
 
-						node.colorevent = color_event;
-						update_color(node);
-						if (using_1) {
-							update_nodes2.push(node);
-						} else {
-							update_nodes1.push(node);
+						if (audio[i] > average_volume[i] * 1.5 + 0.005) {
+							color_event += 1;
+							var x = Math.ceil(Math.random() * max_x - 1);
+							var y = Math.ceil(Math.random() * max_y - 1);
+							var node = get_node(x, y);
+							node.r = Math.round(Math.random() * (255 - ((i % 64) * 4)));
+							node.g = Math.round(Math.random() * (255 - ((i % 64) * 4)));
+							node.b = Math.round(Math.random() * (255 - ((i % 64) * 4)));
+
+							node.colorevent = color_event;
+							update_color(node);
+							if (using_1) {
+								update_nodes2.push(node);
+							} else {
+								update_nodes1.push(node);
+							}
+
+							hexagon_canvas_context.fillRect(20, 20, 40, 40);
+							hexagon_canvas_context.fillStyle = node.color;
 						}
-
-						hexagon_canvas_context.fillRect(20, 20, 40, 40);
-						hexagon_canvas_context.fillStyle = node.color;
+						average_volume[i] = audio[i] * 0.002 + average_volume[i] * 0.998
 					}
-
 
 					for (var i = previous_sums.length - 2; i >= 0; i--) {
 						previous_sums[i + 1] = previous_sums[i];
