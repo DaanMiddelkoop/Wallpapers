@@ -31,7 +31,7 @@
 
 			var audio = [];
 
-			var max_fps = 35;
+			var max_fps = 25;
 
 			var average_sum = 0;
 			var average_volume = [];
@@ -149,14 +149,14 @@
 						*/
 					for (var i = 0; i < 128; i++) {
 
-						if (audio[i] > average_volume[i] * 1.5 + 0.005) {
+						if (audio[i] > average_volume[i] * 2.1 + 0.005 && sum > average_sum * 1.0) {
 							color_event += 1;
 							var x = Math.ceil(Math.random() * max_x - 1);
 							var y = Math.ceil(Math.random() * max_y - 1);
 							var node = get_node(x, y);
-							node.r = Math.round(Math.random() * (255 - ((i % 64) * 4)));
-							node.g = Math.round(Math.random() * (255 - ((i % 64) * 4)));
-							node.b = Math.round(Math.random() * (255 - ((i % 64) * 4)));
+							node.r = Math.round(Math.random() * 255);//(255 - ((i % 64) * 4)));
+							node.g = Math.round(Math.random() * 255);//(255 - ((i % 64) * 4)));
+							node.b = Math.round(Math.random() * 255);//(255 - ((i % 64) * 4)));
 
 							node.colorevent = color_event;
 							update_color(node);
@@ -165,17 +165,10 @@
 							} else {
 								update_nodes1.push(node);
 							}
-
-							hexagon_canvas_context.fillRect(20, 20, 40, 40);
-							hexagon_canvas_context.fillStyle = node.color;
 						}
-						average_volume[i] = audio[i] * 0.002 + average_volume[i] * 0.998
+						average_volume[i] = audio[i] * 0.5 + average_volume[i] * 0.5
 					}
-
-					for (var i = previous_sums.length - 2; i >= 0; i--) {
-						previous_sums[i + 1] = previous_sums[i];
-					}
-					previous_sums[0] = sum;
+					average_sum = average_sum * 0.95 + sum * 0.05;
 				}
 			}
 
@@ -209,9 +202,9 @@
 
 				for (var i = 0; i < nodes.length; i++) {
 					var node = nodes[i];
-					node.r = Math.max(node.r - 5, 0);
-					node.g = Math.max(node.g - 5, 0);
-					node.b = Math.max(node.b - 5, 0);
+					node.r = Math.max(node.r - 8, 0);
+					node.g = Math.max(node.g - 8, 0);
+					node.b = Math.max(node.b - 8, 0);
 					update_color(node);
 				}
 			}
